@@ -18,8 +18,14 @@ def get_youtube_transcript(video_id: str, language_code: str = None) -> tuple[st
         Exception: If transcript is not available
     """
     try:
-        # Get list of available transcripts
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        # Define a list of proxies to use (you'll need to get actual working proxies)
+        proxies = [
+            'http://brd-customer-hl_56c42ece-zone-summaize_proxy:46sm0t40kivs@brd.superproxy.io:33335',
+            # Add more proxies
+        ]
+        
+        # Get list of available transcripts with proxies
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
 
         # Try to find transcript in the requested language
         if language_code:
