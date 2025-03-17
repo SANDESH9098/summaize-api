@@ -1,29 +1,50 @@
+# transcript_service.py
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import re
 
-def get_youtube_transcript(video_id: str) -> str:
+
+def get_youtube_transcript(video_id: str, language_code: str = None) -> tuple[str, str]:
     """
     Fetch transcript for a YouTube video using youtube-transcript-api.
 
     Args:
         video_id: YouTube video ID
+        language_code: Preferred language code (e.g., 'en', 'te', 'ja')
 
     Returns:
-        Combined transcript text
+        Tuple of (combined transcript text, language code that was used)
 
     Raises:
         Exception: If transcript is not available
     """
     try:
-        # Try to get transcript in English first
+        # Get list of available transcripts
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
-        # Try to find English transcript first
-        try:
-            transcript = transcript_list.find_transcript(['en'])
-        except NoTranscriptFound:
-            # If no English transcript is found, just use the first available
-            transcript = transcript_list.find_transcript([])
+        # Try to find transcript in the requested language
+        if language_code:
+            try:
+                transcript = transcript_list.find_transcript([language_code])
+                used_language = language_code
+            except NoTranscriptFound:
+                # If requested language not found, fall back to English
+                try:
+                    transcript = transcript_list.find_transcript(['en'])
+                    used_language = 'en'
+                except NoTranscriptFound:
+                    # If English not found, use first available
+                    transcript = transcript_list.find_transcript([])
+                    # Get the language of the transcript we found
+                    used_language = transcript.language_code
+        else:
+            # No language specified, try English first
+            try:
+                transcript = transcript_list.find_transcript(['en'])
+                used_language = 'en'
+            except NoTranscriptFound:
+                # If no English transcript, use first available
+                transcript = transcript_list.find_transcript([])
+                used_language = transcript.language_code
 
         # Get the transcript
         transcript_pieces = transcript.fetch()
@@ -34,12 +55,13 @@ def get_youtube_transcript(video_id: str) -> str:
         # Clean up the transcript (remove timestamps, speaker identifications, etc.)
         full_transcript = clean_transcript(full_transcript)
 
-        return full_transcript
+        return full_transcript, used_language
 
     except (TranscriptsDisabled, NoTranscriptFound) as e:
         raise Exception(f"No transcripts found for video: {str(e)}")
     except Exception as e:
         raise Exception(f"Error fetching transcript: {str(e)}")
+
 
 def clean_transcript(transcript: str) -> str:
     """
